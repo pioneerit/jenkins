@@ -84,7 +84,19 @@ remote_file File.join(home_dir, "jenkins.war") do
   owner node['jenkins']['server']['user']
   group node['jenkins']['server']['group']
   notifies :restart, "runit_service[jenkins]"
+  action :nothing
 end
+
+http_request "HEAD #{node['jenkins']['mirror']}/war/#{node['jenkins']['server']['version']}/jenkins.war" do
+  message ""
+  url "#{node['jenkins']['mirror']}/war/#{node['jenkins']['server']['version']}/jenkins.war"
+  action :head
+  if File.exists?(File.join(home_dir, "jenkins.war"))
+    headers "If-Modified-Since" => File.mtime(File.join(home_dir, "jenkins.war")).httpdate
+  end
+  notifies :create, "remote_file[#{File.join(home_dir, "jenkins.war")}]", :immediately
+end
+
 
 # Only restart if plugins were added
 log "plugins updated, restarting jenkins" do
